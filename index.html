@@ -1,0 +1,641 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>证书批量生成系统</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+        }
+
+        .spinner {
+            border: 2px solid #f3f3f3;
+            border-top: 2px solid #3498db;
+            border-radius: 50%;
+            width: 20px;
+            height: 20px;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% {
+                transform: rotate(0deg);
+            }
+
+            100% {
+                transform: rotate(360deg);
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div id="root"></div>
+
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+
+    <script>
+        const { useState } = React;
+        const { createElement: h } = React;
+
+        // 图标组件库
+        const Icons = {
+            Upload: ({ size = 20, className = '' }) => h('svg', {
+                className, width: size, height: size, viewBox: '0 0 24 24',
+                fill: 'none', stroke: 'currentColor', strokeWidth: 2,
+                strokeLinecap: 'round', strokeLinejoin: 'round'
+            },
+                h('path', { d: 'M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4' }),
+                h('polyline', { points: '17 8 12 3 7 8' }),
+                h('line', { x1: '12', y1: '3', x2: '12', y2: '15' })
+            ),
+            FileSpreadsheet: ({ size = 20, className = '' }) => h('svg', {
+                className, width: size, height: size, viewBox: '0 0 24 24',
+                fill: 'none', stroke: 'currentColor', strokeWidth: 2
+            },
+                h('path', { d: 'M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z' }),
+                h('polyline', { points: '14 2 14 8 20 8' }),
+                h('line', { x1: '16', y1: '13', x2: '8', y2: '13' }),
+                h('line', { x1: '16', y1: '17', x2: '8', y2: '17' }),
+                h('polyline', { points: '10 9 9 9 8 9' })
+            ),
+            Download: ({ size = 20, className = '' }) => h('svg', {
+                className, width: size, height: size, viewBox: '0 0 24 24',
+                fill: 'none', stroke: 'currentColor', strokeWidth: 2
+            },
+                h('path', { d: 'M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4' }),
+                h('polyline', { points: '7 10 12 15 17 10' }),
+                h('line', { x1: '12', y1: '15', x2: '12', y2: '3' })
+            ),
+            CheckCircle: ({ size = 20, className = '' }) => h('svg', {
+                className, width: size, height: size, viewBox: '0 0 24 24',
+                fill: 'none', stroke: 'currentColor', strokeWidth: 2
+            },
+                h('path', { d: 'M22 11.08V12a10 10 0 1 1-5.93-9.14' }),
+                h('polyline', { points: '22 4 12 14.01 9 11.01' })
+            ),
+            AlertCircle: ({ size = 20, className = '' }) => h('svg', {
+                className, width: size, height: size, viewBox: '0 0 24 24',
+                fill: 'none', stroke: 'currentColor', strokeWidth: 2
+            },
+                h('circle', { cx: '12', cy: '12', r: '10' }),
+                h('line', { x1: '12', y1: '8', x2: '12', y2: '12' }),
+                h('line', { x1: '12', y1: '16', x2: '12.01', y2: '16' })
+            ),
+            FileText: ({ size = 20, className = '' }) => h('svg', {
+                className, width: size, height: size, viewBox: '0 0 24 24',
+                fill: 'none', stroke: 'currentColor', strokeWidth: 2
+            },
+                h('path', { d: 'M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z' }),
+                h('polyline', { points: '14 2 14 8 20 8' }),
+                h('line', { x1: '16', y1: '13', x2: '8', y2: '13' }),
+                h('line', { x1: '16', y1: '17', x2: '8', y2: '17' }),
+                h('line', { x1: '10', y1: '9', x2: '8', y2: '9' })
+            ),
+            Layers: ({ size = 20, className = '' }) => h('svg', {
+                className, width: size, height: size, viewBox: '0 0 24 24',
+                fill: 'none', stroke: 'currentColor', strokeWidth: 2
+            },
+                h('polygon', { points: '12 2 2 7 12 12 22 7 12 2' }),
+                h('polyline', { points: '2 17 12 22 22 17' }),
+                h('polyline', { points: '2 12 12 17 22 12' })
+            ),
+            Wand2: ({ size = 20, className = '' }) => h('svg', {
+                className, width: size, height: size, viewBox: '0 0 24 24',
+                fill: 'none', stroke: 'currentColor', strokeWidth: 2
+            },
+                h('path', { d: 'M15 4V2' }),
+                h('path', { d: 'M15 16v-2' }),
+                h('path', { d: 'M8 9h2' }),
+                h('path', { d: 'M20 9h2' }),
+                h('path', { d: 'M17.8 11.8 19 13' }),
+                h('path', { d: 'M15 9h0' }),
+                h('path', { d: 'M17.8 6.2 19 5' }),
+                h('path', { d: 'm3 21 9-9' }),
+                h('path', { d: 'M12.2 6.2 11 5' })
+            ),
+            Settings: ({ size = 20, className = '' }) => h('svg', {
+                className, width: size, height: size, viewBox: '0 0 24 24',
+                fill: 'none', stroke: 'currentColor', strokeWidth: 2
+            },
+                h('circle', { cx: '12', cy: '12', r: '3' }),
+                h('path', { d: 'M12 1v6m0 6v6' }),
+                h('path', { d: 'm1 12 6 0m6 0 6 0' })
+            )
+        };
+
+        function CertificateGenerator() {
+            const [step, setStep] = useState(1);
+            const [files, setFiles] = useState([]);
+            const [fileType, setFileType] = useState('');
+            const [sheets, setSheets] = useState([]);
+            const [selectedSheets, setSelectedSheets] = useState({});
+            const [allNames, setAllNames] = useState([]);
+            const [enableDedup, setEnableDedup] = useState(true);
+            const [duplicateWarning, setDuplicateWarning] = useState(null);
+            const [generating, setGenerating] = useState(false);
+            const [error, setError] = useState('');
+            const [manualMode, setManualMode] = useState(false);
+
+            const handleTxtUpload = (e) => {
+                const uploadedFile = e.target.files[0];
+                if (!uploadedFile) return;
+                setFiles([uploadedFile]);
+                setFileType('txt');
+                setError('');
+                const reader = new FileReader();
+                reader.onload = (event) => {
+                    try {
+                        const text = event.target.result;
+                        const names = text.split(/[\r\n]+/).map(line => line.trim()).filter(line => line !== '');
+                        if (names.length === 0) {
+                            setError('TXT文件为空，请上传包含姓名的文件');
+                            return;
+                        }
+                        const nameCount = {};
+                        names.forEach(name => {
+                            nameCount[name] = (nameCount[name] || 0) + 1;
+                        });
+                        const duplicates = Object.entries(nameCount).filter(([name, count]) => count > 1).map(([name, count]) => ({ name, count }));
+                        if (duplicates.length > 0) {
+                            setDuplicateWarning({
+                                total: names.length,
+                                unique: Object.keys(nameCount).length,
+                                duplicates: duplicates
+                            });
+                        } else {
+                            setDuplicateWarning(null);
+                        }
+                        const finalNames = enableDedup ? [...new Set(names)] : names;
+                        setAllNames(finalNames);
+                        setStep(3);
+                    } catch (err) {
+                        setError('读取TXT文件失败，请确保文件格式正确');
+                        console.error(err);
+                    }
+                };
+                reader.readAsText(uploadedFile, 'UTF-8');
+            };
+
+            const handleFileUpload = async (e) => {
+                const uploadedFiles = Array.from(e.target.files);
+                if (uploadedFiles.length === 0) return;
+                setFiles(uploadedFiles);
+                setFileType('excel');
+                setError('');
+                try {
+                    const allSheetsData = [];
+                    for (let fileIndex = 0; fileIndex < uploadedFiles.length; fileIndex++) {
+                        const file = uploadedFiles[fileIndex];
+                        const fileName = file.name.replace(/\.(xlsx|xls)$/i, '');
+                        const data = await new Promise((resolve, reject) => {
+                            const reader = new FileReader();
+                            reader.onload = (event) => resolve(new Uint8Array(event.target.result));
+                            reader.onerror = reject;
+                            reader.readAsArrayBuffer(file);
+                        });
+                        const workbook = XLSX.read(data, { type: 'array' });
+                        if (workbook.SheetNames.length === 0) continue;
+                        const fileSheets = workbook.SheetNames.map(sheetName => {
+                            const worksheet = workbook.Sheets[sheetName];
+                            const nameKeywords = ['姓名', 'name', '名字', '名称', '学生姓名', '学生', '人员', '员工'];
+                            let bestData = null, bestColumns = [], bestNameCol = '', bestScore = 0;
+                            for (let startRow = 0; startRow <= 2; startRow++) {
+                                try {
+                                    const jsonData = startRow === 0 ? XLSX.utils.sheet_to_json(worksheet) : XLSX.utils.sheet_to_json(worksheet, { range: startRow });
+                                    if (jsonData.length === 0) continue;
+                                    const columns = Object.keys(jsonData[0]);
+                                    let score = 0, matchedCol = '';
+                                    for (const col of columns) {
+                                        if (nameKeywords.some(keyword => col.toLowerCase().includes(keyword.toLowerCase()))) {
+                                            score += 100;
+                                            matchedCol = col;
+                                            break;
+                                        }
+                                    }
+                                    const validCols = columns.filter(col => !col.startsWith('_EMPTY'));
+                                    score += validCols.length * 10;
+                                    const firstRowValues = Object.values(jsonData[0]);
+                                    const nonEmptyValues = firstRowValues.filter(v => v !== null && v !== undefined && v !== '');
+                                    score += (nonEmptyValues.length / firstRowValues.length) * 20;
+                                    if (score > bestScore) {
+                                        bestScore = score;
+                                        bestData = jsonData;
+                                        bestColumns = columns;
+                                        bestNameCol = matchedCol;
+                                    }
+                                } catch (e) { continue; }
+                            }
+                            if (!bestNameCol && bestData && bestData.length > 0) {
+                                for (const col of bestColumns) {
+                                    const sampleValues = bestData.slice(0, 10).map(row => row[col]).filter(v => v);
+                                    if (sampleValues.length > 0) {
+                                        const likeNameCount = sampleValues.filter(val => {
+                                            const str = String(val).trim();
+                                            return str.length >= 2 && str.length <= 6 && /[\u4e00-\u9fa5]/.test(str);
+                                        }).length;
+                                        if (likeNameCount / sampleValues.length > 0.7) {
+                                            bestNameCol = col;
+                                            break;
+                                        }
+                                    }
+                                }
+                            }
+                            return {
+                                fileName: fileName,
+                                name: sheetName,
+                                displayName: uploadedFiles.length > 1 ? `${fileName} - ${sheetName}` : sheetName,
+                                data: bestData || [],
+                                columns: bestColumns,
+                                nameColumn: bestNameCol,
+                                autoDetected: !!bestNameCol,
+                                isEmpty: !bestData || bestData.length === 0
+                            };
+                        });
+                        allSheetsData.push(...fileSheets);
+                    }
+                    if (allSheetsData.length === 0) {
+                        setError('所有Excel文件都为空');
+                        return;
+                    }
+                    setSheets(allSheetsData);
+                    const initialSelected = {};
+                    let allDetected = true;
+                    let hasEmptySheets = false;
+                    allSheetsData.forEach((sheet, idx) => {
+                        const shouldSelect = !sheet.isEmpty;
+                        initialSelected[idx] = { selected: shouldSelect, nameColumn: sheet.nameColumn };
+                        if (!sheet.nameColumn && !sheet.isEmpty) allDetected = false;
+                        if (sheet.isEmpty) hasEmptySheets = true;
+                    });
+                    setSelectedSheets(initialSelected);
+                    setManualMode(!allDetected);
+                    let errorMsg = '';
+                    if (!allDetected) errorMsg = '部分Sheet无法自动识别姓名列，请手动选择';
+                    if (hasEmptySheets) {
+                        const emptySheetNames = allSheetsData.filter(s => s.isEmpty).map(s => s.displayName).join('、');
+                        errorMsg += (errorMsg ? '；' : '') + `检测到空Sheet（${emptySheetNames}），已自动取消选中`;
+                    }
+                    if (errorMsg) setError(errorMsg);
+                    setStep(2);
+                } catch (err) {
+                    setError('读取Excel文件失败，请确保文件格式正确');
+                    console.error(err);
+                }
+            };
+
+            const toggleSheetSelection = (idx) => {
+                setSelectedSheets(prev => ({ ...prev, [idx]: { ...prev[idx], selected: !prev[idx].selected } }));
+            };
+
+            const updateNameColumn = (idx, column) => {
+                setSelectedSheets(prev => ({ ...prev, [idx]: { ...prev[idx], nameColumn: column } }));
+            };
+
+            const handleExtractAll = () => {
+                const extractedNames = [], errors = [], skippedEmptySheets = [];
+                sheets.forEach((sheet, idx) => {
+                    const sheetConfig = selectedSheets[idx];
+                    if (!sheetConfig.selected) return;
+                    if (sheet.isEmpty || sheet.data.length === 0) {
+                        skippedEmptySheets.push(sheet.displayName || sheet.name);
+                        return;
+                    }
+                    if (!sheetConfig.nameColumn) {
+                        errors.push(`Sheet "${sheet.displayName || sheet.name}" 未选择姓名列`);
+                        return;
+                    }
+                    const names = sheet.data.map(row => row[sheetConfig.nameColumn]).filter(name => name && name.toString().trim() !== '').map(name => name.toString().trim());
+                    extractedNames.push(...names);
+                });
+                if (errors.length > 0) {
+                    setError(errors.join('；'));
+                    return;
+                }
+                if (extractedNames.length === 0) {
+                    if (skippedEmptySheets.length > 0) {
+                        setError(`所有选中的Sheet都是空的：${skippedEmptySheets.join('、')}`);
+                    } else {
+                        setError('没有提取到任何姓名，请检查选择的列');
+                    }
+                    return;
+                }
+                const nameCount = {};
+                extractedNames.forEach(name => { nameCount[name] = (nameCount[name] || 0) + 1; });
+                const duplicates = Object.entries(nameCount).filter(([name, count]) => count > 1).map(([name, count]) => ({ name, count }));
+                if (duplicates.length > 0) {
+                    setDuplicateWarning({ total: extractedNames.length, unique: Object.keys(nameCount).length, duplicates: duplicates });
+                } else {
+                    setDuplicateWarning(null);
+                }
+                const finalNames = enableDedup ? [...new Set(extractedNames)] : extractedNames;
+                setAllNames(finalNames);
+                setError('');
+                if (skippedEmptySheets.length > 0) {
+                    setError(`已跳过空Sheet：${skippedEmptySheets.join('、')}`);
+                }
+                setStep(3);
+            };
+
+            const downloadNamesAsTxt = () => {
+                const txtContent = allNames.join('\n');
+                const blob = new Blob([txtContent], { type: 'text/plain;charset=utf-8' });
+                const url = window.URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = '姓名列表.txt';
+                document.body.appendChild(a);
+                a.click();
+                window.URL.revokeObjectURL(url);
+                document.body.removeChild(a);
+            };
+
+            const handleGenerate = async () => {
+                setGenerating(true);
+                setError('');
+                try {
+                    const response = await fetch('http://localhost:5001/generate', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ names: allNames })
+                    });
+                    if (!response.ok) {
+                        const errorData = await response.json();
+                        throw new Error(errorData.error || '生成失败，请检查后端服务');
+                    }
+                    const blob = await response.blob();
+                    const url = window.URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = '证书合集.docx';
+                    document.body.appendChild(a);
+                    a.click();
+                    window.URL.revokeObjectURL(url);
+                    document.body.removeChild(a);
+                    setStep(4);
+                } catch (err) {
+                    setError(err.message);
+                    console.error(err);
+                } finally {
+                    setGenerating(false);
+                }
+            };
+
+            const selectedCount = Object.values(selectedSheets).filter(s => s.selected).length;
+            const autoDetectedCount = sheets.filter(s => s.autoDetected).length;
+
+            return h('div', { className: 'min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 p-8' },
+                h('div', { className: 'max-w-4xl mx-auto' },
+                    h('div', { className: 'text-center mb-8' },
+                        h('h1', { className: 'text-4xl font-bold text-gray-800 mb-2' }, '📜 证书批量生成系统'),
+                        h('p', { className: 'text-gray-600' }, '智能识别 + 手动调整，支持多Sheet Excel和TXT')
+                    ),
+                    h('div', { className: 'flex justify-center mb-8' },
+                        [1, 2, 3, 4].map((s) => h('div', { key: s, className: 'flex items-center' },
+                            h('div', { className: `w-10 h-10 rounded-full flex items-center justify-center font-bold ${step >= s ? 'bg-indigo-600 text-white' : 'bg-gray-300 text-gray-600'}` }, s),
+                            s < 4 && h('div', { className: `w-16 h-1 ${step > s ? 'bg-indigo-600' : 'bg-gray-300'}` })
+                        ))
+                    ),
+                    error && h('div', { className: 'mb-6 p-4 bg-red-50 border border-red-200 rounded-lg flex items-start' },
+                        h(Icons.AlertCircle, { size: 20, className: 'text-red-500 mr-3 mt-0.5 flex-shrink-0' }),
+                        h('p', { className: 'text-red-700' }, error)
+                    ),
+                    h('div', { className: 'bg-white rounded-xl shadow-lg p-8' },
+                        step === 1 && h('div', { className: 'text-center' },
+                            h(Icons.FileSpreadsheet, { size: 64, className: 'mx-auto mb-4 text-indigo-600' }),
+                            h('h2', { className: 'text-2xl font-bold mb-4' }, '上传文件'),
+                            h('p', { className: 'text-gray-600 mb-6' }, '支持多个Excel文件（多Sheet智能识别）或单个TXT文本（每行一个姓名）'),
+                            h('div', { className: 'flex gap-4 justify-center mb-4' },
+                                h('label', { className: 'inline-block cursor-pointer' },
+                                    h('div', { className: 'px-6 py-4 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition flex items-center' },
+                                        h(Icons.FileSpreadsheet, { size: 20, className: 'mr-2' }),
+                                        '上传Excel文件'
+                                    ),
+                                    h('input', { type: 'file', accept: '.xlsx,.xls', onChange: handleFileUpload, multiple: true, className: 'hidden' })
+                                ),
+                                h('label', { className: 'inline-block cursor-pointer' },
+                                    h('div', { className: 'px-6 py-4 bg-green-600 text-white rounded-lg hover:bg-green-700 transition flex items-center' },
+                                        h(Icons.FileText, { size: 20, className: 'mr-2' }),
+                                        '上传TXT文件'
+                                    ),
+                                    h('input', { type: 'file', accept: '.txt', onChange: handleTxtUpload, className: 'hidden' })
+                                )
+                            ),
+                            files.length > 0 && h('div', { className: 'mt-4' },
+                                h('p', { className: 'text-sm text-gray-600 mb-2' }, '已选择: ', h('span', { className: 'font-semibold' }, files.length === 1 ? files[0].name : `${files.length} 个文件`)),
+                                files.length > 1 && h('div', { className: 'text-xs text-gray-500 space-y-1' },
+                                    files.map((f, idx) => h('div', { key: idx }, `${idx + 1}. ${f.name}`))
+                                ),
+                                h('p', { className: 'text-xs text-gray-500 mt-1' }, '文件类型: ', fileType === 'excel' ? `Excel表格 (${files.length}个)` : 'TXT文本')
+                            ),
+                            h('div', { className: 'mt-6 p-4 bg-blue-50 rounded-lg text-left' },
+                                h('p', { className: 'text-sm font-semibold text-blue-900 mb-2' }, '📝 文件格式要求'),
+                                h('div', { className: 'text-xs text-blue-800 space-y-1' },
+                                    h('p', {}, h('strong', {}, 'Excel：'), '支持同时上传多个Excel文件，每个文件可包含多个Sheet'),
+                                    h('p', {}, h('strong', {}, 'TXT：'), '每行一个姓名，例如：'),
+                                    h('pre', { className: 'bg-white p-2 rounded mt-1 text-gray-700' }, '张三\n李四\n王五')
+                                )
+                            )
+                        ),
+                        step === 2 && h('div', {},
+                            h('div', { className: 'flex items-center justify-between mb-4' },
+                                h('h2', { className: 'text-2xl font-bold' }, '配置工作表'),
+                                h('div', { className: 'flex items-center gap-3' },
+                                    h('button', {
+                                        onClick: () => setManualMode(!manualMode),
+                                        className: 'flex items-center gap-2 px-4 py-2 border border-indigo-300 rounded-lg hover:bg-indigo-50 transition text-sm'
+                                    },
+                                        manualMode ? [h(Icons.Wand2, { key: 'icon', size: 16 }), h('span', { key: 'text' }, '智能模式')] : [h(Icons.Settings, { key: 'icon', size: 16 }), h('span', { key: 'text' }, '手动模式')]
+                                    ),
+                                    h('div', { className: 'text-sm text-gray-600' }, `${selectedCount} / ${sheets.length} 个Sheet`, files.length > 1 && h('span', { className: 'ml-2 text-xs' }, `(${files.length}个文件)`))
+                                )
+                            ),
+                            !manualMode && h('div', { className: 'mb-6 p-4 bg-green-50 border border-green-200 rounded-lg' },
+                                h('div', { className: 'flex items-start' },
+                                    h(Icons.Wand2, { size: 20, className: 'text-green-600 mr-3 mt-0.5 flex-shrink-0' }),
+                                    h('div', {},
+                                        h('p', { className: 'font-semibold text-green-800 mb-1' }, '智能识别结果'),
+                                        h('p', { className: 'text-sm text-green-700' }, `已自动识别 ${autoDetectedCount}/${sheets.length} 个Sheet的姓名列`, autoDetectedCount < sheets.length && h('span', { className: 'text-red-600' }, ' · 部分Sheet需要手动调整'))
+                                    )
+                                )
+                            ),
+                            h('div', { className: 'space-y-4 mb-6 max-h-[500px] overflow-y-auto' },
+                                sheets.map((sheet, idx) => {
+                                    const config = selectedSheets[idx];
+                                    const hasNameColumn = config?.nameColumn;
+                                    const isEmpty = sheet.isEmpty;
+                                    return h('div', {
+                                        key: idx,
+                                        className: `border rounded-lg p-4 transition ${isEmpty ? 'border-gray-300 bg-gray-100 opacity-60' : config?.selected ? hasNameColumn ? 'border-green-300 bg-green-50' : 'border-red-300 bg-red-50' : 'border-gray-200 bg-gray-50'}`
+                                    },
+                                        h('div', { className: 'flex items-start' },
+                                            h('input', {
+                                                type: 'checkbox',
+                                                checked: config?.selected || false,
+                                                onChange: () => toggleSheetSelection(idx),
+                                                disabled: isEmpty,
+                                                className: `mt-1 mr-3 w-5 h-5 text-indigo-600 rounded ${isEmpty ? 'opacity-50 cursor-not-allowed' : ''}`
+                                            }),
+                                            h('div', { className: 'flex-1' },
+                                                h('div', { className: 'flex items-center mb-3' },
+                                                    h(Icons.Layers, { size: 18, className: 'text-indigo-600 mr-2' }),
+                                                    h('h3', { className: 'font-bold text-lg' }, sheet.displayName || sheet.name),
+                                                    isEmpty && h('span', { className: 'ml-2 px-2 py-1 bg-gray-400 text-white text-xs rounded-full' }, '空表'),
+                                                    sheet.autoDetected && !manualMode && !isEmpty && h('span', { className: 'ml-2 px-2 py-1 bg-green-600 text-white text-xs rounded-full' }, '✓ 已识别'),
+                                                    !hasNameColumn && config?.selected && !isEmpty && h('span', { className: 'ml-2 px-2 py-1 bg-red-600 text-white text-xs rounded-full' }, '! 需设置'),
+                                                    h('span', { className: 'ml-auto text-sm text-gray-600' }, `${sheet.data.length} 行`)
+                                                ),
+                                                isEmpty && h('p', { className: 'text-sm text-gray-500 italic mb-3' }, 'ℹ️ 此Sheet无数据，无法选择'),
+                                                config?.selected && !isEmpty && [
+                                                    !manualMode && hasNameColumn && h('div', { key: 'auto', className: 'mb-3 p-3 bg-white rounded border border-green-200' },
+                                                        h('p', { className: 'text-sm' }, h('span', { className: 'font-semibold text-gray-700' }, '姓名列：'), h('span', { className: 'text-green-700 font-bold' }, config.nameColumn))
+                                                    ),
+                                                    (manualMode || !hasNameColumn) && h('div', { key: 'manual', className: 'mb-3' },
+                                                        h('label', { className: 'block text-sm font-semibold mb-2' }, '姓名列'),
+                                                        h('select', {
+                                                            value: config?.nameColumn || '',
+                                                            onChange: (e) => updateNameColumn(idx, e.target.value),
+                                                            className: 'w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent'
+                                                        }, h('option', { value: '' }, '-- 请选择 --'), sheet.columns.map(col => h('option', { key: col, value: col }, col)))
+                                                    ),
+                                                    sheet.data.length > 0 && h('div', { key: 'preview' },
+                                                        h('p', { className: 'text-xs font-semibold text-gray-600 mb-2' }, '数据预览（前3行）'),
+                                                        h('div', { className: 'overflow-x-auto border rounded bg-white' },
+                                                            h('table', { className: 'w-full text-xs' },
+                                                                h('thead', { className: 'bg-gray-50' },
+                                                                    h('tr', {},
+                                                                        sheet.columns.slice(0, 5).map(col => h('th', { key: col, className: 'px-3 py-1 text-left font-semibold' }, col, col === config?.nameColumn && h('span', { className: 'ml-1 text-green-600' }, '★'))),
+                                                                        sheet.columns.length > 5 && h('th', { className: 'px-3 py-1 text-left text-gray-400' }, '...')
+                                                                    )
+                                                                ),
+                                                                h('tbody', {},
+                                                                    sheet.data.slice(0, 3).map((row, rowIdx) => h('tr', { key: rowIdx, className: 'border-t' },
+                                                                        sheet.columns.slice(0, 5).map(col => h('td', { key: col, className: `px-3 py-1 ${col === config?.nameColumn ? 'bg-green-50 font-semibold' : ''}` }, row[col])),
+                                                                        sheet.columns.length > 5 && h('td', { className: 'px-3 py-1 text-gray-400' }, '...')
+                                                                    ))
+                                                                )
+                                                            )
+                                                        )
+                                                    )
+                                                ]
+                                            )
+                                        )
+                                    );
+                                })
+                            ),
+                            h('div', { className: 'flex space-x-4' },
+                                h('button', { onClick: () => setStep(1), className: 'px-6 py-3 border border-gray-300 rounded-lg hover:bg-gray-50 transition' }, '上一步'),
+                                h('button', { onClick: handleExtractAll, disabled: selectedCount === 0, className: 'flex-1 px-6 py-3 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition disabled:bg-gray-400' }, '提取所有姓名')
+                            ),
+                            h('div', { className: 'mt-6 p-4 bg-blue-50 border border-blue-200 rounded-lg' },
+                                h('label', { className: 'flex items-center cursor-pointer' },
+                                    h('input', { type: 'checkbox', checked: enableDedup, onChange: (e) => setEnableDedup(e.target.checked), className: 'w-4 h-4 text-indigo-600 rounded mr-3' }),
+                                    h('div', {},
+                                        h('span', { className: 'font-semibold text-blue-900' }, '自动去重（推荐）'),
+                                        h('p', { className: 'text-xs text-blue-700 mt-1' }, '如果有重名学生，只为其生成一张证书。取消勾选将为每个姓名生成独立证书（即使重名）。')
+                                    )
+                                )
+                            )
+                        ),
+                        step === 3 && h('div', {},
+                            h('h2', { className: 'text-2xl font-bold mb-4' }, '确认姓名列表'),
+                            h('div', { className: 'flex items-center gap-2 mb-4' },
+                                h('p', { className: 'text-gray-600' },
+                                    fileType === 'excel' ? `从 ${selectedCount} 个Sheet中提取到` : '从TXT文件中提取到',
+                                    h('span', { className: 'font-bold text-indigo-600' }, ` ${allNames.length} `),
+                                    `个${enableDedup ? '唯一' : ''}姓名`
+                                ),
+                                files.length > 0 && h('span', { className: 'text-xs text-gray-500' }, `(${files.length === 1 ? files[0].name : `${files.length}个文件`})`)
+                            ),
+                            duplicateWarning && duplicateWarning.duplicates.length > 0 && h('div', { className: `mb-6 p-4 border rounded-lg ${enableDedup ? 'bg-yellow-50 border-yellow-300' : 'bg-blue-50 border-blue-300'}` },
+                                h('div', { className: 'flex items-start mb-3' },
+                                    h(Icons.AlertCircle, { size: 20, className: `${enableDedup ? 'text-yellow-600' : 'text-blue-600'} mr-3 mt-0.5 flex-shrink-0` }),
+                                    h('div', { className: 'flex-1' },
+                                        h('p', { className: `font-semibold ${enableDedup ? 'text-yellow-900' : 'text-blue-900'} mb-1` }, enableDedup ? '⚠️ 检测到重名（已自动去重）' : 'ℹ️ 检测到重名'),
+                                        h('p', { className: `text-sm ${enableDedup ? 'text-yellow-800' : 'text-blue-800'} mb-2` },
+                                            `原始数据共 `, h('strong', {}, duplicateWarning.total), ` 条，唯一姓名 `, h('strong', {}, duplicateWarning.unique), ` 个，${enableDedup ? '去重后' : ''}将生成 `, h('strong', {}, allNames.length), ` 张证书`
+                                        ),
+                                        h('div', { className: `text-xs ${enableDedup ? 'text-yellow-700' : 'text-blue-700'} space-y-1` },
+                                            h('p', { className: 'font-semibold' }, '重名列表：'),
+                                            h('div', { className: 'flex flex-wrap gap-2 mt-2' },
+                                                duplicateWarning.duplicates.slice(0, 10).map((dup, idx) =>
+                                                    h('span', { key: idx, className: `px-2 py-1 ${enableDedup ? 'bg-yellow-100' : 'bg-blue-100'} rounded text-xs` }, `${dup.name} `, h('span', { className: 'font-bold' }, `×${dup.count}`))
+                                                ),
+                                                duplicateWarning.duplicates.length > 10 && h('span', { className: 'text-gray-600' }, `...还有 ${duplicateWarning.duplicates.length - 10} 个重名`)
+                                            )
+                                        )
+                                    )
+                                ),
+                                enableDedup && h('div', { className: 'mt-3 pt-3 border-t border-yellow-200' },
+                                    h('p', { className: 'text-xs text-yellow-800' }, '💡 ', h('strong', {}, '提示：'), '如果这些是不同的人（例如不同班级的同名学生），请返回上一步，取消勾选"自动去重"选项，或在Excel中为姓名添加区分标识（如"张伟-1班"）。')
+                                )
+                            ),
+                            h('div', { className: 'mb-6 p-4 border rounded-lg bg-gray-50 max-h-96 overflow-y-auto' },
+                                h('div', { className: 'flex items-center justify-between mb-3' },
+                                    h('h3', { className: 'font-semibold text-sm text-gray-700' }, '姓名列表'),
+                                    h('button', { onClick: downloadNamesAsTxt, className: 'flex items-center gap-1 px-3 py-1.5 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition' }, h(Icons.Download, { size: 16 }), '下载TXT')
+                                ),
+                                h('div', { className: 'grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-2' },
+                                    allNames.map((name, idx) => h('div', { key: idx, className: 'px-3 py-2 bg-white rounded-lg text-center shadow-sm' }, name))
+                                )
+                            ),
+                            h('div', { className: 'flex space-x-4' },
+                                h('button', { onClick: () => setStep(fileType === 'txt' ? 1 : 2), className: 'px-6 py-3 border border-gray-300 rounded-lg hover:bg-gray-50 transition', disabled: generating }, '上一步'),
+                                h('button', {
+                                    onClick: handleGenerate,
+                                    disabled: generating,
+                                    className: 'flex-1 px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition disabled:bg-gray-400 flex items-center justify-center'
+                                }, generating ? [h('div', { key: 'spinner', className: 'animate-spin rounded-full h-5 w-5 border-b-2 border-white mr-2' }), '生成中...'] : [h(Icons.Download, { key: 'icon', size: 20, className: 'mr-2' }), '生成证书文档'])
+                            ),
+                            h('div', { className: 'mt-6 p-4 bg-yellow-50 border border-yellow-200 rounded-lg' },
+                                h('p', { className: 'text-sm text-yellow-800' }, '⚠️ ', h('strong', {}, '重要：'), '请确保后端服务已启动（运行 ', h('code', { className: 'bg-yellow-100 px-2 py-1 rounded' }, 'python app.py'), '）')
+                            )
+                        ),
+                        step === 4 && h('div', { className: 'text-center' },
+                            h(Icons.CheckCircle, { size: 64, className: 'mx-auto mb-4 text-green-600' }),
+                            h('h2', { className: 'text-2xl font-bold mb-4' }, '生成完成！'),
+                            h('p', { className: 'text-gray-600 mb-2' }, '证书文档已成功下载'),
+                            h('p', { className: 'text-sm text-gray-500 mb-6' }, `包含 ${allNames.length} 个证书页面`),
+                            h('button', {
+                                onClick: () => {
+                                    setStep(1);
+                                    setFiles([]);
+                                    setFileType('');
+                                    setSheets([]);
+                                    setSelectedSheets({});
+                                    setAllNames([]);
+                                    setManualMode(false);
+                                    setEnableDedup(true);
+                                    setDuplicateWarning(null);
+                                },
+                                className: 'px-8 py-3 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition'
+                            }, '生成更多证书')
+                        )
+                    ),
+                    h('div', { className: 'mt-8 bg-white rounded-xl shadow-lg p-6' },
+                        h('h3', { className: 'font-bold text-lg mb-3 flex items-center' }, h(Icons.FileText, { size: 20, className: 'mr-2 text-indigo-600' }), '使用说明'),
+                        h('ol', { className: 'space-y-2 text-sm text-gray-700' },
+                            h('li', {}, h('strong', {}, '1.'), ' 上传包含姓名的文件（支持多个Excel或单个TXT）'),
+                            h('li', {}, h('strong', {}, '2.'), ' Excel：系统自动识别姓名列，可切换手动模式调整'),
+                            h('li', {}, h('strong', {}, '3.'), ' TXT：每行一个姓名，直接提取'),
+                            h('li', {}, h('strong', {}, '4.'), ' 确认姓名列表后生成证书文档')
+                        ),
+                        h('div', { className: 'mt-4 p-3 bg-blue-50 rounded-lg' },
+                            h('p', { className: 'text-xs text-blue-800' }, '💡 ', h('strong', {}, '智能识别关键词：'), '姓名、name、名字、名称、学生姓名、学生、人员、员工')
+                        )
+                    )
+                )
+            );
+        }
+
+        ReactDOM.render(h(CertificateGenerator), document.getElementById('root'));
+    </script>
+</body>
+
+</html>
