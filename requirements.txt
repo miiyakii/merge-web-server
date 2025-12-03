@@ -3,4 +3,3 @@ flask-cors
 python-docx
 docxcompose
 gunicorn
-lxml
