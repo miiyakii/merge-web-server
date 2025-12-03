@@ -23,4 +23,4 @@ COPY . /app
 EXPOSE 5001
 
 # Use gunicorn for a production-ready server (1 worker by default)
-CMD ["gunicorn", "--bind", "0.0.0.0:5001", "app:app", "--workers", "1"]
+CMD ["gunicorn", "--bind", "localhost:5001", "app:app", "--workers", "1"]

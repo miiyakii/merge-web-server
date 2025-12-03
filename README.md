@@ -10,10 +10,10 @@ Run the container (map port and provide the template file if not included in the
 
 ```bash
 # If your template `证书名字.docx` is in the project root and you want to mount it:
-docker run --rm -p 5001:5001 -v "$(pwd)/证书名字.docx:/app/证书名字.docx" merge-web-server:latest
+docker run --rm -p 5001:5001 -v "$(pwd)/证书名字.docx:/app/证书名字.docx" ghcr.io/miiyakii/merge-web-server:latest
 
 # Or run without mounting (if the template is already present in the image):
-docker run --rm -p 5001:5001 merge-web-server:latest
+docker run --rm -p 5001:5001 ghcr.io/miiyakii/merge-web-server:latest
 ```
 
 Health check:
