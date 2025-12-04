@@ -109,5 +109,5 @@ if __name__ == '__main__':
     print("🌐 服务地址: http://localhost:5001")
     print("📱 Web界面: http://localhost:5001")
     print("=" * 50)
-    app.run(debug=True, host='localhost',port=5001)
+    app.run(debug=False, host='0.0.0.0',port=5001)
 

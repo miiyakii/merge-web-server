@@ -1,26 +1,16 @@
-FROM python:3.11-slim
+# 使用官方 Python 3.14 运行环境作为基础镜像
+FROM python:3.14-slim
 
-ENV PYTHONDONTWRITEBYTECODE=1 \
-    PYTHONUNBUFFERED=1
-
+# 设置工作目录
 WORKDIR /app
 
-# Install build deps for some Python packages that need compilation
-RUN apt-get update && apt-get install -y \
-    build-essential \
-    libxml2-dev \
-    libxslt1-dev \
-    zlib1g-dev \
-    && rm -rf /var/lib/apt/lists/*
-
-# Install Python deps
-COPY requirements.txt ./
-RUN pip install --upgrade pip && pip install --no-cache-dir -r requirements.txt
-
-# Copy application code
+# 复制项目文件到容器
 COPY . /app
 
-EXPOSE 5001
+# 安装依赖
+RUN pip install --no-cache-dir -r requirements.txt
 
-# Use gunicorn for a production-ready server (1 worker by default)
-CMD ["gunicorn", "--bind", "localhost:5001", "app:app", "--workers", "1"]
+# 设置容器启动命令
+COPY entrypoint.sh /entrypoint.sh
+RUN chmod +x /entrypoint.sh
+ENTRYPOINT ["/entrypoint.sh"]
