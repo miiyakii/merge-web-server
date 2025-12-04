@@ -130,6 +130,9 @@
             )
         };
 
+        // 后端 API 地址（容器启动时由环境变量替换）
+        const API_URL = "__API_URL__";
+
         function CertificateGenerator() {
             const [step, setStep] = useState(1);
             const [files, setFiles] = useState([]);
@@ -360,7 +363,7 @@
                 setGenerating(true);
                 setError('');
                 try {
-                    const response = await fetch(__API_URL__ + '/generate', {
+                    const response = await fetch(API_URL + '/generate', {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({ names: allNames })

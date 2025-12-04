@@ -4,6 +4,15 @@ services:
     image: ghcr.io/miiyakii/merge-web-server:latest
     ports:
       - "5001:5001"
-    volumes:
-      - ./:/app
+    environment:
+      - API_URL="http://172.19.232.253:5001" # 可按需修改为实际后端地址
+    # volumes:
+    #   - ./证书名字.docx:/app/证书名字.docx # 如需挂载证书模板
     restart: unless-stopped
+    networks:
+      - caddy_net
+    hostname: merge-web-server
+
+networks:
+  caddy_net:
+    driver: bridge
